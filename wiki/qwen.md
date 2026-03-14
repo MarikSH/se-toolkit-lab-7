@@ -217,7 +217,7 @@ The file must be non-empty.
 
     Example: `http://localhost:42005/v1`
 
-11. To check that the `Qwen` API works,
+11. To check that the `Qwen` API is accessible inside your VM,
 
     [run in the `VS Code Terminal`](./vs-code.md#run-a-command-in-the-vs-code-terminal):
 
@@ -268,7 +268,7 @@ The file must be non-empty.
     }
     ```
 
-12. To check that you can access the deployed `Qwen` API from your local machine:
+12. To check that you can access the deployed `Qwen` API from your local machine (your laptop):
   
     1. Open a new `VS Code Terminal`.
     2. To query the `Qwen` API,
