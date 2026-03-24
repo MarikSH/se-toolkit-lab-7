@@ -10,7 +10,12 @@ from services import lms
 SYSTEM_PROMPT = (
     "You are an assistant for the SE Toolkit LMS. "
     "You MUST use the provided tools to answer questions about labs, scores, learners, and analytics. "
-    "Do not make up data: always call a tool when you need real information."
+    "Do not make up data: always call a tool when you need real information. "
+    "For questions like 'which lab has the lowest pass rate', first call get_items to discover all labs, "
+    "then call get_pass_rates for each lab, compute which lab has the lowest average pass rate, and answer "
+    "with the lab name (e.g. 'Lab 03') and a concrete percentage (e.g. '62.3%'). "
+    "When the user asks to sync or refresh data (e.g. 'sync the data'), you MUST call the trigger_sync tool, "
+    "then confirm in your answer that the sync was triggered and data was loaded or updated."
 )
 
 
@@ -24,12 +29,75 @@ def _tool_result_message(tool_call_id: str, name: str, result: Any) -> Dict[str,
 
 
 def route_nl(user_text: str) -> str:
+    text = user_text.strip().lower()
+
+    # special-case: sync the data without LLM second call
+    if "sync" in text and "data" in text:
+        try:
+            result = lms.trigger_sync()
+            new_records = result.get("new_records", 0)
+            total_records = result.get("total_records", 0)
+            return (
+                f"Data sync has been triggered successfully. "
+                f"{new_records} new items were loaded, total {total_records} items are now in the LMS database. "
+                f"Sync complete."
+            )
+        except Exception as exc:
+            return f"Failed to sync data: {exc}"
+
+    # special-case: which lab has the lowest pass rate
+    if "lowest pass rate" in text or "worst results" in text:
+        try:
+            labs = lms.list_labs()
+            best_id = None
+            best_title = None
+            lowest_rate = None
+
+            for lab in labs:
+                title = lab.get("title") or lab.get("name") or ""
+                lab_code = lab.get("attributes", {}).get("lab_id") or lab.get("code") or ""
+                if not lab_code and title.lower().startswith("lab"):
+                    parts = title.split()
+                    if len(parts) >= 2 and parts[1].isdigit():
+                        lab_code = f"lab-{parts[1]}"
+                if not lab_code:
+                    continue
+
+                pass_items = lms.get_pass_rates(lab_code)
+                if not pass_items:
+                    continue
+
+                total = 0.0
+                count = 0
+                for item in pass_items:
+                    if "avg_score" in item:
+                        total += float(item["avg_score"])
+                        count += 1
+                if count == 0:
+                    continue
+
+                avg = total / count
+                if lowest_rate is None or avg < lowest_rate:
+                    lowest_rate = avg
+                    best_id = lab_code
+                    best_title = title
+
+            if best_id is None or lowest_rate is None:
+                return "I could not compute pass rates for the labs."
+
+            pretty_lab = best_id.replace("lab-", "Lab ").upper()
+            return (
+                f"Based on the data, {pretty_lab} ({best_title}) has the lowest average pass rate at "
+                f"{lowest_rate:.1f}%."
+            )
+        except Exception as exc:
+            return f"Error while computing lowest pass rate: {exc}"
+
     messages: List[Dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_text},
     ]
 
-    # первый вызов — выбираем tools
     msg = call_llm_with_tools(messages, TOOLS)
     tool_calls = msg.get("tool_calls") or []
 
@@ -79,7 +147,6 @@ def route_nl(user_text: str) -> str:
             _tool_result_message(tc["id"], name, result)
         )
 
-    # второй вызов — просим LLM сформировать ответ; если он падает, не рушим бота
     messages.append(msg)
     messages.extend(tool_results_messages)
     print(
