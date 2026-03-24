@@ -54,3 +54,82 @@ def get_pass_rates(lab_id: str) -> List[Dict[str, Any]]:
     if isinstance(data, list):
         return data
     return []
+
+
+def get_learners() -> List[Dict[str, Any]]:
+    resp = httpx.get(
+        f"{lms_config.base_url}/learners/",
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, list):
+        return data
+    return []
+
+
+def get_scores(lab_id: str) -> Any:
+    resp = httpx.get(
+        f"{lms_config.base_url}/analytics/scores",
+        params={"lab": lab_id},
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_timeline(lab_id: str) -> Any:
+    resp = httpx.get(
+        f"{lms_config.base_url}/analytics/timeline",
+        params={"lab": lab_id},
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_groups(lab_id: str) -> Any:
+    resp = httpx.get(
+        f"{lms_config.base_url}/analytics/groups",
+        params={"lab": lab_id},
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_top_learners(lab_id: str, limit: int = 5) -> Any:
+    resp = httpx.get(
+        f"{lms_config.base_url}/analytics/top-learners",
+        params={"lab": lab_id, "limit": limit},
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_completion_rate(lab_id: str) -> Any:
+    resp = httpx.get(
+        f"{lms_config.base_url}/analytics/completion-rate",
+        params={"lab": lab_id},
+        headers=_auth_headers(),
+        timeout=5.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def trigger_sync() -> Any:
+    resp = httpx.post(
+        f"{lms_config.base_url}/pipeline/sync",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={},
+        timeout=10.0,
+    )
+    resp.raise_for_status()
+    return resp.json()

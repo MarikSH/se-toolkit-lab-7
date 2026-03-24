@@ -1,4 +1,5 @@
 import sys
+
 from handlers.basic import (
     handle_start,
     handle_help,
@@ -7,26 +8,33 @@ from handlers.basic import (
     handle_labs,
     handle_scores,
 )
+from services.router import route_nl
 
 
 def run_test_mode(text: str) -> int:
     text = text.strip()
-    if text.startswith("/start"):
-        resp = handle_start()
-    elif text.startswith("/help"):
-        resp = handle_help()
-    elif text.startswith("/health"):
-        resp = handle_health()
-    elif text.startswith("/labs"):
-        resp = handle_labs()
-    elif text.startswith("/scores"):
-        parts = text.split(maxsplit=1)
-        args = parts[1] if len(parts) > 1 else ""
-        resp = handle_scores(args)
+    if text.startswith("/"):
+        # старые slash-команды
+        if text.startswith("/start"):
+            resp = handle_start()
+        elif text.startswith("/help"):
+            resp = handle_help()
+        elif text.startswith("/health"):
+            resp = handle_health()
+        elif text.startswith("/labs"):
+            resp = handle_labs()
+        elif text.startswith("/scores"):
+            parts = text.split(maxsplit=1)
+            args = parts[1] if len(parts) > 1 else ""
+            resp = handle_scores(args)
+        else:
+            resp = handle_unknown(text)
     else:
-        resp = handle_unknown(text)
+        # natural language — через LLM router
+        resp = route_nl(text)
     print(resp)
     return 0
+
 
 def main() -> None:
     if "--test" in sys.argv:
@@ -34,13 +42,14 @@ def main() -> None:
             idx = sys.argv.index("--test")
             query = sys.argv[idx + 1]
         except (ValueError, IndexError):
-            print('Usage: bot.py --test "/command"')
+            print('Usage: bot.py --test "/command" or "free text"', file=sys.stderr)
             sys.exit(1)
         code = run_test_mode(query)
         sys.exit(code)
     else:
-        print("Telegram mode is not implemented yet for Task 1.")
+        print("Telegram mode is not implemented yet for Task 3.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
