@@ -4,7 +4,10 @@ from handlers.basic import (
     handle_help,
     handle_health,
     handle_unknown,
+    handle_labs,
+    handle_scores,
 )
+
 
 def run_test_mode(text: str) -> int:
     text = text.strip()
@@ -14,6 +17,12 @@ def run_test_mode(text: str) -> int:
         resp = handle_help()
     elif text.startswith("/health"):
         resp = handle_health()
+    elif text.startswith("/labs"):
+        resp = handle_labs()
+    elif text.startswith("/scores"):
+        parts = text.split(maxsplit=1)
+        args = parts[1] if len(parts) > 1 else ""
+        resp = handle_scores(args)
     else:
         resp = handle_unknown(text)
     print(resp)
