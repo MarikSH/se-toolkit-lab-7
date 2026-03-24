@@ -31,7 +31,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
+  bot:
+    build:
+      context: ./bot
+    env_file:
+      - .env.docker.secret
+    depends_on:
+      - backend
+    restart: unless-stopped
   postgres:
     image: ${REGISTRY_PREFIX:-harbor.pg.innopolis.university/docker-hub-cache/}postgres:18.3-alpine
     restart: unless-stopped

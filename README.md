@@ -91,3 +91,47 @@ By the end of this lab, you should be able to say:
 2. [Backend Integration](./lab/tasks/required/task-2.md) — P0: slash commands + real data
 3. [Intent-Based Natural Language Routing](./lab/tasks/required/task-3.md) — P1: LLM tool use
 4. [Containerize and Document](./lab/tasks/required/task-4.md) — P3: containerize + deploy
+
+
+
+## Deploy / Containerize
+
+To run the LMS backend and bot together with Docker:
+
+1. Create `.env.docker.secret` in the repo root with:
+
+ ```env
+   AUTOCHECKER_API_URL=https://auche.namaz.live
+   AUTOCHECKER_API_LOGIN=m.sharapov@innopolis.university
+   AUTOCHECKER_API_PASSWORD=MarikSHMarikShar
+
+   BOT_TOKEN=your-telegram-bot-token
+   LMS_API_URL=http://backend:8000
+   LLM_API_KEY=your-qwen-api-key
+   LLM_API_BASE_URL=http://host.docker.internal:42005/v1
+   LLM_API_MODEL=coder-model
+
+   CONST_POSTGRESQL_SERVICE_NAME=postgres
+   CONST_POSTGRESQL_SERVER_NAME=postgres-lab-7
+   CONST_POSTGRESQL_DEFAULT_PORT=5432
+   ```
+
+2. Build and start services:
+
+   ```bash
+   docker compose --env-file .env.docker.secret up --build -d
+   ```
+
+3. Verify that containers are running:
+
+   ```bash
+   docker compose ps
+   ```
+
+   You should see `backend` healthy and `bot` running.
+
+4. To view bot logs:
+
+   ```bash
+   docker compose logs -f bot
+   ```
