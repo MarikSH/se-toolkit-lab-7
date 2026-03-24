@@ -55,7 +55,11 @@ def route_nl(user_text: str) -> str:
 
             for lab in labs:
                 title = lab.get("title") or lab.get("name") or ""
-                lab_code = lab.get("attributes", {}).get("lab_id") or lab.get("code") or ""
+                lab_code = (
+                    lab.get("attributes", {}).get("lab_id")
+                    or lab.get("code")
+                    or ""
+                )
                 if not lab_code and title.lower().startswith("lab"):
                     parts = title.split()
                     if len(parts) >= 2 and parts[1].isdigit():
@@ -93,12 +97,44 @@ def route_nl(user_text: str) -> str:
         except Exception as exc:
             return f"Error while computing lowest pass rate: {exc}"
 
+    # special-case: list available labs without second LLM call
+    if "what labs are available" in text or ("labs" in text and "available" in text):
+        try:
+            labs = lms.list_labs()
+            if not labs:
+                return "There are no labs available at the moment."
+            titles = []
+            for lab in labs:
+                title = lab.get("title") or lab.get("name")
+                if title:
+                    titles.append(title)
+            if not titles:
+                return "I could not find any lab titles in the LMS."
+            labs_str = "; ".join(titles)
+            return f"The following labs are available: {labs_str}."
+        except Exception as exc:
+            return f"Error while listing labs: {exc}"
+
+    # special-case: how many students are enrolled
+    if "how many" in text and "student" in text and "enrolled" in text:
+        try:
+            learners = lms.get_learners()
+            count = len(learners)
+            return f"There are {count} students enrolled in the system."
+        except Exception as exc:
+            return f"Error while counting enrolled students: {exc}"
+
     messages: List[Dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_text},
     ]
 
-    msg = call_llm_with_tools(messages, TOOLS)
+    # first LLM call: decide which tools to use
+    try:
+        msg = call_llm_with_tools(messages, TOOLS)
+    except Exception as exc:
+        return f"LLM error while deciding which tools to call: {exc}"
+
     tool_calls = msg.get("tool_calls") or []
 
     if not tool_calls:
@@ -153,8 +189,15 @@ def route_nl(user_text: str) -> str:
         f"[summary] Feeding {len(tool_results_messages)} tool results back to LLM",
         file=sys.stderr,
     )
+
+    # second LLM call: summarize tool results, но без падений по 500/таймауту
     try:
         final_msg = call_llm_with_tools(messages, TOOLS)
-        return final_msg.get("content") or "No answer from LLM."
+        content = final_msg.get("content") or ""
+        if not isinstance(content, str):
+            content = str(content)
+        if content.strip():
+            return content
+        return "No answer from LLM."
     except Exception as exc:
         return f"LLM error while summarizing tool results: {exc}"
