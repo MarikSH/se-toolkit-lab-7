@@ -78,7 +78,7 @@ By the end of this lab, you should be able to say:
 3. I used an AI coding agent to plan and build the whole thing.
 
 ## Tasks
-
+1. Chill.
 ### Prerequisites
 
 1. Complete the [lab setup](./lab/setup/setup-simple.md#lab-setup)
