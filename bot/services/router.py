@@ -27,7 +27,7 @@ def _tool_result_message(tool_call_id: str, name: str, result: Any) -> Dict[str,
         "content": json.dumps(result),
     }
 
-
+#function route_nl
 def route_nl(user_text: str) -> str:
     text = user_text.strip().lower()
 
